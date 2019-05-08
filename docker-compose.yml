@@ -1,0 +1,58 @@
+version: "3"
+
+services:
+ redis:
+  image: 'redis:4-alpine'
+  env_file: .env
+  container_name: redis
+  command: redis-server
+  ports:
+    - '${SURVEY_REDIS_SERVER_PORT}:6379'
+    
+ postgres:
+  image: postgres:11
+  env_file: .env
+  ports:
+    - "${POSTGRES_SERVER_PORT}:5432"
+     
+ survey-eureka-server:
+    image: javaadore/survey/survey-eureka-server
+    env_file: .env
+    container_name: "survey-eureka-server"
+    ports:
+      - "${SURVEY_EUREKA_SERVER_PORT}:8761"
+    command: ["java", "-jar", "/survey-eureka-server.jar"]
+
+
+    
+ survey-definition-service:
+  image: javaadore/survey/survey-definition-service
+  env_file: .env
+  command: ["/classes/wait-for-it.sh", "${SURVEY_EUREKA_SERVER_IP}:${SURVEY_EUREKA_SERVER_PORT}", "--", "java", "-jar", "/survey-definition-service.jar"]
+  depends_on:
+    - "survey-eureka-server"   
+      
+ survey-servyee-service:
+  image: javaadore/survey/survey-serveyee-service
+  env_file: .env
+  command: ["/classes/wait-for-it.sh", "${SURVEY_EUREKA_SERVER_IP}:${SURVEY_EUREKA_SERVER_PORT}", "--", "java", "-jar", "/survey-serveyee-service.jar"]
+  depends_on:
+    - "survey-eureka-server"   
+
+ survey-rest-gateway:
+  image: javaadore/survey/survey-rest-gateway
+  env_file: .env
+  command: ["/classes/wait-for-it.sh", "${SURVEY_EUREKA_SERVER_IP}:${SURVEY_EUREKA_SERVER_PORT}", "--", "java", "-jar", "/survey-rest-gateway.jar"]
+  ports:
+    - "8080:8080"
+  depends_on:
+    - "survey-eureka-server"  
+    
+ survey-zipkin-server:
+  image: javaadore/survey/survey-zipkin-server
+  env_file: .env
+  command: ["/classes/wait-for-it.sh", "${SURVEY_EUREKA_SERVER_IP}:${SURVEY_EUREKA_SERVER_PORT}", "--", "java", "-jar", "/survey-zipkin-server.jar"]
+  ports:
+   - "${SURVEY_ZIPKIN_SERVER_PORT}:9411"
+  depends_on:
+    - "survey-eureka-server"  
